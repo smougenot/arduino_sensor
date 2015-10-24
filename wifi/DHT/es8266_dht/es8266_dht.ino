@@ -9,7 +9,7 @@
 #include <ESP8266WebServer.h>
 #include <DHT.h>
 #define DHTTYPE DHT22
-#define DHTPIN  2
+#define DHTPIN  5
  
 const char* ssid     = "MaisonSMT";
 const char* password = "m3f13t01";
@@ -34,7 +34,7 @@ const long interval = 2000;              // interval at which to read sensor
  
 void handle_root() {
   server.send(200, "text/html", "<html><body><h1>Hello from the weather esp8266</h1><p>read from</p> <a href='/temp'>/temp</a> or <a href='/humidity'>/humidity</aS></body></html>");
-  delay(100);
+  // delay(100);
 }
  
 void setup(void)
@@ -101,7 +101,9 @@ void gettemperature() {
     temp = dht.readTemperature(false);   // Read temperature as Celcius
     // Check if any reads failed and exit early (to try again).
     if (isnan(humidity) || isnan(temp)) {
-      Serial.println("Failed to read from DHT sensor!");
+      Serial.print("Failed to read from DHT sensor : ");
+      Serial.print(temp);
+      Serial.println("!");
       humidity = temp = -1;
       return;
     }
