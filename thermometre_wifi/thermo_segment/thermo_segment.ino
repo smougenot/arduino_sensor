@@ -1,7 +1,13 @@
+#define ADAFRUIT_IO_DEBUG 1
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <dht.h>
+#include "Adafruit_IO_Client.h"
+
+// Configure Adafruit IO access.
+#define AIO_KEY    "5ae061cb1ec4eec40969980fc3faa5969ae0cc27"
+#define AIO_FEED   "temperature-esp8266"
 
 // Sensor definitions
 #define DHTPIN  5
@@ -21,14 +27,37 @@ const char* password = "m3f13t01";
 
 // http web server
 ESP8266WebServer server(80);
+String webString="";     // String to display
  
 // Initialize DHT sensor 
 dht DHT;
-
-String webString="";     // String to display
 // Generally, you should use "unsigned long" for variables that hold time
 unsigned long previousMillis = 0;        // will store last temp was read
-const long interval = 2000;              // min time between sensor read in ms
+const long interval = 2000;              // min time between sensor read in ms : 2 seconds mini
+
+//
+// adafruit IO
+//
+
+// Create an ESP8266 WiFiClient class to connect to the AIO server.
+WiFiClient client;
+
+// Create an Adafruit IO Client instance.  Notice that this needs to take a
+// WiFiClient object as the first parameter, and as the second parameter a
+// default Adafruit IO key to use when accessing feeds (however each feed can
+// override this default key value if required, see further below).
+Adafruit_IO_Client aio = Adafruit_IO_Client(client, AIO_KEY);
+
+// Finally create instances of Adafruit_IO_Feed objects, one per feed.  Do this
+// by calling the getFeed function on the Adafruit_IO_FONA object and passing
+// it at least the name of the feed, and optionally a specific AIO key to use
+// when accessing the feed (the default is to use the key set on the
+// Adafruit_IO_Client class).
+Adafruit_IO_Feed testFeed = aio.getFeed(AIO_FEED);
+
+// Alternatively to access a feed with a specific key:
+//Adafruit_IO_Feed testFeed = aio.getFeed("esptestfeed", "...esptestfeed key...");
+
 
 
 void setup(){
@@ -66,6 +95,14 @@ void setup(){
   Serial.println(WiFi.localIP());
 
   //
+  // Adafruit IO
+  //
+  
+  // Initialize the Adafruit IO client class (not strictly necessary with the
+  // client class, but good practice).
+  aio.begin();
+
+  //
   // HTTP server
   //
   
@@ -101,6 +138,23 @@ void handle_humidity() {
     server.send(200, "text/plain", webString);               // send to someones browser when asked
 }
 
+void sendTemperature2Adafruit(){
+  Serial.print(F("Adafruit send feed: ")); 
+  Serial.println(DHT.temperature, 1);
+  // To write a value just call the feed's send function and pass it the value.
+  // Send will create the feed on Adafruit IO if it doesn't already exist and
+  // then add the value to it.  Send returns a boolean that's true if it works
+  // and false if it fails for some reason.
+  if (testFeed.send(DHT.temperature)) {
+    Serial.print(F("Wrote value to feed: ")); 
+    Serial.println(DHT.temperature, 1);
+  }
+  else {
+    Serial.println(F("Error writing value to feed!"));
+  }
+
+}
+
 void doDigitCheck(){
   for(int i=0; i<10; i++){
     Serial.print("digit : ");
@@ -129,16 +183,19 @@ void displayTemperature(){
 }
 
 void getTemperature() {
-  // Wait at least 2 seconds seconds between measurements.
-  // if the difference between the current time and last time you read
-  // the sensor is bigger than the interval you set, read the sensor
-  // Works better than delay for things happening elsewhere also
+  // Wait at least the defined interval (at least 2 seconds) between measurements.
   unsigned long currentMillis = millis();
  
   if(currentMillis - previousMillis >= interval) {
     // save the last time you read the sensor 
     previousMillis = currentMillis;   
 
+    readTemperature();
+
+  }
+}
+
+void readTemperature(){
     Serial.println("Reading DHT22 sensor");
     int chk = DHT.read22(DHTPIN);
 
@@ -165,5 +222,7 @@ void getTemperature() {
     Serial.println("°C");
 
     displayTemperature();
-  }
+    sendTemperature2Adafruit();
+
 }
+
