@@ -119,11 +119,23 @@ void loop(){
   // doDigitCheck();
 }
 
+//
+// Web server content generations
+//
+
+/**
+ * Build the content for
+ * http://<sensor>/
+ */
 void handle_root() {
   server.send(200, "text/html", "<html><body><h1>Hello from the weather esp8266</h1><p>read from</p> <a href='/temp'>/temp</a> or <a href='/humidity'>/humidity</aS></body></html>");
 //  delay(100);
 }
 
+/**
+ * Build the content for
+ * http://<sensor>/temp
+ */
 void handle_temp() {
   // if you add this subdirectory to your webserver call, you get text below :)
     getTemperature();       // read sensor
@@ -131,6 +143,10 @@ void handle_temp() {
     server.send(200, "text/plain", webString);            // send to someones browser when asked
 }
 
+/**
+ * Build the content for
+ * http://<sensor>/humidity
+ */
 void handle_humidity() {
 // if you add this subdirectory to your webserver call, you get text below :)
     getTemperature();           // read sensor
@@ -138,6 +154,9 @@ void handle_humidity() {
     server.send(200, "text/plain", webString);               // send to someones browser when asked
 }
 
+/**
+ * Trying to send datas to adafruit cloud 
+ */
 void sendTemperature2Adafruit(){
   Serial.print(F("Adafruit send feed: ")); 
   Serial.println(DHT.temperature, 1);
@@ -155,6 +174,10 @@ void sendTemperature2Adafruit(){
 
 }
 
+/**
+ * Wiring health check 
+ * Count slowly to alow human check of the wiring/code cohérence
+ */
 void doDigitCheck(){
   for(int i=0; i<10; i++){
     Serial.print("digit : ");
@@ -164,6 +187,9 @@ void doDigitCheck(){
   }
 }
 
+/**
+ * Technicalities about displaying on the 7 segments output
+ */
 void to7SegmentDigit(int digit1){
   Serial.print("Display 7 segments : ");  
   Serial.println(digit1);
@@ -174,6 +200,9 @@ void to7SegmentDigit(int digit1){
   digitalWrite(LATCH, HIGH);
 }
 
+/**
+ * Display on the embedded hardware
+ */
 void displayTemperature(){
     Serial.print("Display temperature on 7 segments : ");  
     Serial.print(DHT.temperature, 1);
@@ -182,6 +211,10 @@ void displayTemperature(){
     to7SegmentDigit(DHT.temperature/10);
 }
 
+/**
+ * Gateway to the sensor
+ * Takes care of the timing (do not ask the sensor too often ... it has limits)
+ */
 void getTemperature() {
   // Wait at least the defined interval (at least 2 seconds) between measurements.
   unsigned long currentMillis = millis();
@@ -195,8 +228,16 @@ void getTemperature() {
   }
 }
 
+/**
+ * Technicalities for reading the sensor
+ */
 void readTemperature(){
     Serial.println("Reading DHT22 sensor");
+
+    //
+    // Read the sensor
+    //
+    
     int chk = DHT.read22(DHTPIN);
 
     switch (chk)
@@ -221,7 +262,14 @@ void readTemperature(){
     Serial.print(DHT.temperature, 1);
     Serial.println("°C");
 
+    //
+    // transmit datas
+    //
+
+    // to the embedded display
     displayTemperature();
+
+    // to the network
     sendTemperature2Adafruit();
 
 }
