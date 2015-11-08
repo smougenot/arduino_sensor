@@ -4,6 +4,7 @@
 #include <ESP8266WebServer.h>
 #include <dht.h>
 #include "Adafruit_IO_Client.h"
+#include <Ticker.h>
 
 // Configure Adafruit IO access.
 #define AIO_KEY    "5ae061cb1ec4eec40969980fc3faa5969ae0cc27"
@@ -34,6 +35,9 @@ dht DHT;
 // Generally, you should use "unsigned long" for variables that hold time
 unsigned long previousMillis = 0;        // will store last temp was read
 const long interval = 2000;              // min time between sensor read in ms : 2 seconds mini
+
+// Sensor reading timer
+Ticker flipper;
 
 //
 // adafruit IO
@@ -74,6 +78,9 @@ void setup(){
   pinMode(CLK,   OUTPUT);
   pinMode(DATA,  OUTPUT);
 
+  // display 0
+  to7SegmentDigit(0);
+
   //
   // WIFI
   //
@@ -95,6 +102,13 @@ void setup(){
   Serial.println(WiFi.localIP());
 
   //
+  // Sensor reading
+  //
+  
+  // flip the pin every 0.3s
+  flipper.attach(2.5, doReadSensor);
+
+  //
   // Adafruit IO
   //
   
@@ -112,6 +126,11 @@ void setup(){
   
   server.begin();
   Serial.println("HTTP server started");
+
+  // première mesure
+  Serial.println("Lancement de la première mesure");  
+  getTemperature();
+  displayTemperature();
 }
 
 void loop(){
@@ -138,7 +157,7 @@ void handle_root() {
  */
 void handle_temp() {
   // if you add this subdirectory to your webserver call, you get text below :)
-    getTemperature();       // read sensor
+    //getTemperature();       // read sensor
     webString="Temperature: "+String((int)DHT.temperature)+" °C";   // Arduino has a hard time with float to string
     server.send(200, "text/plain", webString);            // send to someones browser when asked
 }
@@ -149,9 +168,27 @@ void handle_temp() {
  */
 void handle_humidity() {
 // if you add this subdirectory to your webserver call, you get text below :)
-    getTemperature();           // read sensor
+    //getTemperature();           // read sensor
     webString="Humidity: "+String((int)DHT.humidity)+"%";
     server.send(200, "text/plain", webString);               // send to someones browser when asked
+}
+
+/**
+ * Callback for sensor reading
+ */
+void doReadSensor(){
+  Serial.println(F("doReadSensor")); 
+  getTemperature();
+  
+  //
+  // transmit datas
+  //
+
+  // to the embedded display
+  displayTemperature();
+
+  // to the network
+  //sendTemperature2Adafruit();
 }
 
 /**
@@ -261,16 +298,5 @@ void readTemperature(){
     Serial.print("%,\t");
     Serial.print(DHT.temperature, 1);
     Serial.println("°C");
-
-    //
-    // transmit datas
-    //
-
-    // to the embedded display
-    displayTemperature();
-
-    // to the network
-    sendTemperature2Adafruit();
-
 }
 
