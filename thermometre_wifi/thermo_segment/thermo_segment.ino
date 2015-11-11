@@ -1,3 +1,12 @@
+/**
+ * Little project to retreave datas and push that on the web
+ * TODO :
+ * 1 buffer the reading => copy data in local vars if read succèss to prevent absurd values to be sent
+ * 2 make adafruit storage work
+ * 3 let it work standalone for proof
+ * 4 deploy own storage (maybe mqtt + casandra + dashboard on Raspberry Pi)
+ */
+
 #define ADAFRUIT_IO_DEBUG 1
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
