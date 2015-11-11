@@ -18,6 +18,10 @@
 #define CLK   14
 #define DATA  16
 
+// Flags
+#define READ_ON   1
+#define READ_OFF  0
+
 //This is the hex value of each number stored in an array by index num
 const byte digitOne[10]= {0xDE, 0x06, 0xEC, 0xAE, 0x36, 0xBA, 0xFA, 0x0E, 0xFE, 0xBE};
 //const byte digitOne[10]= {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00, 0x00};
@@ -62,7 +66,7 @@ Adafruit_IO_Feed testFeed = aio.getFeed(AIO_FEED);
 // Alternatively to access a feed with a specific key:
 //Adafruit_IO_Feed testFeed = aio.getFeed("esptestfeed", "...esptestfeed key...");
 
-
+int doRead = READ_OFF;
 
 void setup(){
 
@@ -105,8 +109,8 @@ void setup(){
   // Sensor reading
   //
   
-  // flip the pin every 0.3s
-  flipper.attach(2.5, doReadSensor);
+  // flip the pin every 2.5s
+  flipper.attach(10, readOnNextLoop);
 
   //
   // Adafruit IO
@@ -131,11 +135,17 @@ void setup(){
   Serial.println("Lancement de la première mesure");  
   getTemperature();
   displayTemperature();
+
+  doRead = READ_OFF;
 }
 
 void loop(){
   server.handleClient();
   // doDigitCheck();
+  if (doRead == READ_ON){
+    doRead = READ_OFF;
+    doReadSensor();
+  }
 }
 
 //
@@ -171,6 +181,11 @@ void handle_humidity() {
     //getTemperature();           // read sensor
     webString="Humidity: "+String((int)DHT.humidity)+"%";
     server.send(200, "text/plain", webString);               // send to someones browser when asked
+}
+
+void readOnNextLoop(){
+  Serial.println(F("readOnNextLoop")); 
+  doRead = READ_ON;
 }
 
 /**
