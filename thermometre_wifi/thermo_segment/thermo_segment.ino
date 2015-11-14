@@ -44,6 +44,9 @@ dht DHT;
 // Generally, you should use "unsigned long" for variables that hold time
 unsigned long previousMillis = 0;        // will store last temp was read
 const long interval = 2000;              // min time between sensor read in ms : 2 seconds mini
+double humidity = -1;
+double temperature = -1;
+
 
 // Sensor reading timer
 Ticker flipper;
@@ -176,7 +179,7 @@ void handle_root() {
 void handle_temp() {
   // if you add this subdirectory to your webserver call, you get text below :)
     //getTemperature();       // read sensor
-    webString="Temperature: "+String((int)DHT.temperature)+" °C";   // Arduino has a hard time with float to string
+    webString="Temperature: "+String(temperature)+" °C";   // Arduino has a hard time with float to string
     server.send(200, "text/plain", webString);            // send to someones browser when asked
 }
 
@@ -187,7 +190,7 @@ void handle_temp() {
 void handle_humidity() {
 // if you add this subdirectory to your webserver call, you get text below :)
     //getTemperature();           // read sensor
-    webString="Humidity: "+String((int)DHT.humidity)+"%";
+    webString="Humidity: "+String((int)humidity)+"%";
     server.send(200, "text/plain", webString);               // send to someones browser when asked
 }
 
@@ -219,14 +222,14 @@ void doReadSensor(){
  */
 void sendTemperature2Adafruit(){
   Serial.print(F("Adafruit send feed: ")); 
-  Serial.println(DHT.temperature, 1);
+  Serial.println(temperature, 1);
   // To write a value just call the feed's send function and pass it the value.
   // Send will create the feed on Adafruit IO if it doesn't already exist and
   // then add the value to it.  Send returns a boolean that's true if it works
   // and false if it fails for some reason.
-  if (testFeed.send(DHT.temperature)) {
+  if (testFeed.send(temperature)) {
     Serial.print(F("Wrote value to feed: ")); 
-    Serial.println(DHT.temperature, 1);
+    Serial.println(temperature, 1);
   }
   else {
     Serial.println(F("Error writing value to feed!"));
@@ -239,10 +242,10 @@ void sendTemperature2Adafruit(){
  */
 void displayTemperature(){
     Serial.print("Display temperature on 7 segments : ");  
-    Serial.print(DHT.temperature, 1);
+    Serial.print(temperature, 1);
     Serial.println("°C");
   
-    display.showNumberDec(DHT.temperature * 10, false, 4, 0);
+    display.showNumberDec(temperature * 10, false, 4, 0);
 }
 
 /**
@@ -278,6 +281,8 @@ void readTemperature(){
     {
     case DHTLIB_OK:
         Serial.print("OK,\t");
+        temperature = DHT.temperature;
+        humidity = DHT.humidity;
         break;
     case DHTLIB_ERROR_CHECKSUM:
         Serial.print("Checksum error,\t");
