@@ -6,8 +6,9 @@
  * 3 let it work standalone for proof
  * 4 deploy own storage (maybe mqtt + casandra + dashboard on Raspberry Pi)
  */
+#include <Arduino.h>
+#include <TM1637Display.h>
 
-#define ADAFRUIT_IO_DEBUG 1
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
@@ -22,18 +23,13 @@
 // Sensor definitions
 #define DHTPIN  5
 
-// 7 segments settings
-#define LATCH 12
-#define CLK   14
-#define DATA  16
+// display
+#define CLK   12
+#define DATA  14
 
 // Flags
 #define READ_ON   1
 #define READ_OFF  0
-
-//This is the hex value of each number stored in an array by index num
-const byte digitOne[10]= {0xDE, 0x06, 0xEC, 0xAE, 0x36, 0xBA, 0xFA, 0x0E, 0xFE, 0xBE};
-//const byte digitOne[10]= {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00, 0x00};
 
 // Wifi settings
 const char* ssid     = "MaisonSMT";
@@ -51,6 +47,9 @@ const long interval = 2000;              // min time between sensor read in ms :
 
 // Sensor reading timer
 Ticker flipper;
+
+// Display
+TM1637Display display(CLK, DATA);
 
 //
 // adafruit IO
@@ -84,15 +83,13 @@ void setup(){
   Serial.println("setup");
 
   //
-  // 7 segment ports
+  // Display
   //
-  
-  pinMode(LATCH, OUTPUT);
-  pinMode(CLK,   OUTPUT);
-  pinMode(DATA,  OUTPUT);
-
-  // display 0
-  to7SegmentDigit(0);
+  display.setBrightness(0x0f);
+  // All segments on
+  Serial.println("all");
+  uint8_t data[] = { 0xff, 0xff, 0xff, 0xff };
+  display.setSegments(data);
 
   //
   // WIFI
@@ -143,6 +140,8 @@ void setup(){
   // première mesure
   Serial.println("Lancement de la première mesure");  
   getTemperature();
+  uint8_t data_clear[] = { 0x0, 0x0, 0x0, 0x0 };
+  display.setSegments(data_clear);
   displayTemperature();
 
   doRead = READ_OFF;
@@ -236,40 +235,14 @@ void sendTemperature2Adafruit(){
 }
 
 /**
- * Wiring health check 
- * Count slowly to alow human check of the wiring/code cohérence
- */
-void doDigitCheck(){
-  for(int i=0; i<10; i++){
-    Serial.print("digit : ");
-    Serial.println(i);
-      to7SegmentDigit(i);
-      delay(500);
-  }
-}
-
-/**
- * Technicalities about displaying on the 7 segments output
- */
-void to7SegmentDigit(int digit1){
-  Serial.print("Display 7 segments : ");  
-  Serial.println(digit1);
-
-  digitalWrite(LATCH, LOW);
-  digitalWrite(CLK, LOW);
-  shiftOut(DATA, CLK, MSBFIRST, digitOne[digit1 % 10]); // digitOne
-  digitalWrite(LATCH, HIGH);
-}
-
-/**
  * Display on the embedded hardware
  */
 void displayTemperature(){
     Serial.print("Display temperature on 7 segments : ");  
     Serial.print(DHT.temperature, 1);
     Serial.println("°C");
-
-    to7SegmentDigit(DHT.temperature/10);
+  
+    display.showNumberDec(DHT.temperature * 10, false, 4, 0);
 }
 
 /**
