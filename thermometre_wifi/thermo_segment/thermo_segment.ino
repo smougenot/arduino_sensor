@@ -12,7 +12,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <dht.h>
+#include "DHT.h"
 #include "Adafruit_IO_Client.h"
 #include <Ticker.h>
 
@@ -22,6 +22,7 @@
 
 // Sensor definitions
 #define DHTPIN  5
+#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
 // display
 #define CLK   12
@@ -31,6 +32,13 @@
 #define READ_ON   1
 #define READ_OFF  0
 
+
+// Initialize DHT sensor.
+// Note that older versions of this library took an optional third parameter to
+// tweak the timings for faster processors.  This parameter is no longer needed
+// as the current DHT reading algorithm adjusts itself to work on faster procs.
+DHT dht;
+
 // Wifi settings
 const char* ssid     = "MaisonSMT";
 const char* password = "m3f13t01";
@@ -39,8 +47,6 @@ const char* password = "m3f13t01";
 ESP8266WebServer server(80);
 String webString="";     // String to display
  
-// Initialize DHT sensor 
-dht DHT;
 // Generally, you should use "unsigned long" for variables that hold time
 unsigned long previousMillis = 0;        // will store last temp was read
 const long interval = 2000;              // min time between sensor read in ms : 2 seconds mini
@@ -84,6 +90,11 @@ void setup(){
   // You can open the Arduino IDE Serial Monitor window to see what the code is doing
   Serial.begin(115200);
   Serial.println("setup");
+
+  //
+  // Sensor
+  //
+  dht.setup(DHTPIN); 
 
   //
   // Display
@@ -260,7 +271,8 @@ void getTemperature() {
     // save the last time you read the sensor 
     previousMillis = currentMillis;   
 
-    readTemperature();
+    readTemperature(); //one lib
+    //readTemperatureAlternate();//another lib
 
   }
 }
@@ -269,36 +281,27 @@ void getTemperature() {
  * Technicalities for reading the sensor
  */
 void readTemperature(){
-    Serial.println("Reading DHT22 sensor");
+    Serial.println("Reading DHT22 sensor ... the alternate way");
 
-    //
-    // Read the sensor
-    //
-    
-    int chk = DHT.read22(DHTPIN);
+	// Reading temperature or humidity takes about 250 milliseconds!
+	// Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+	float h = dht.getHumidity();
+	// Read temperature as Celsius (the default)
+	float t = dht.getTemperature();
 
-    switch (chk)
-    {
-    case DHTLIB_OK:
-        Serial.print("OK,\t");
-        temperature = DHT.temperature;
-        humidity = DHT.humidity;
-        break;
-    case DHTLIB_ERROR_CHECKSUM:
-        Serial.print("Checksum error,\t");
-        break;
-    case DHTLIB_ERROR_TIMEOUT:
-        Serial.print("Time out error,\t");
-        break;
-    default:
-        Serial.print("Unknown error,\t");
-        break;
-    }
+	// Check if any reads failed and exit early (to try again).
+	if (isnan(h) || isnan(t)) {
+	  Serial.println("Failed to read from DHT sensor!");
+	  return;
+	}
+
+
+    temperature = t;
+    humidity = h;
 
     // DISPLAY DATA
-    Serial.print(DHT.humidity, 1);
+    Serial.print(h, 1);
     Serial.print("%,\t");
-    Serial.print(DHT.temperature, 1);
+    Serial.print(t, 1);
     Serial.println("°C");
 }
-
