@@ -6,9 +6,13 @@
 
 #define PRJ_VERSION 1
 
+// I2C pins
+#define IC_CLK  14
+#define IC_DATA 12
+
 // display pins
-#define CLK   14
-#define DATA  16
+#define CLK   2
+#define DATA  0
 
 // Display
 TM1637Display display(CLK, DATA);
@@ -37,6 +41,9 @@ void setup()
     Serial.print("VERSION: ");
     Serial.println(PRJ_VERSION);
     Serial.println();
+    
+    //Wire.pins(int sda, int scl)
+    Wire.pins(IC_DATA, IC_CLK);
 
     //
     // Display
