@@ -6,6 +6,9 @@
 
 #define PRJ_VERSION 1
 
+// wait time (ms)
+#define LOOP_WAIT 1000
+
 // I2C pins
 #define IC_CLK  14
 #define IC_DATA 12
@@ -71,11 +74,11 @@ void loop()
     readSensor();
     trace();
     displayTemperature();
-    delay(300);
+    delay(LOOP_WAIT);
 }
 
 void readSensor(){
-    Serial.println("Read bpm180");
+    //Serial.println("Read bpm180");
     // READ DATA
     float myTemperature = bmp.readTemperature();
     if(myTemperature<150){
@@ -139,9 +142,9 @@ void displayAll(uint8_t aValue){
  * Display on the embedded hardware
  */
 void displayTemperature(){
-    Serial.print("Display temperature : ");  
-    Serial.print(temperature, 1);
-    Serial.println("°C");
+    //Serial.print("Display temperature : ");  
+    //Serial.print(temperature, 1);
+    //Serial.println("°C");
   
     display.showNumberDec(temperature * 10, false, 4, 0);
 }
