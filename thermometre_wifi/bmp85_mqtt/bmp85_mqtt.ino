@@ -10,7 +10,7 @@
 #define PRJ_VERSION 2
 
 // wait time (ms)
-#define LOOP_WAIT 1000
+#define LOOP_WAIT 60 * 1000
 
 // I2C pins
 #define IC_CLK  14
@@ -35,11 +35,11 @@ TM1637Display display(CLK, DATA);
 Adafruit_BMP085 bmp;
 
 // MQTT
-#define CLIENT_ID     "2"
-const char* mqtt_server = "192.168.1.12";
-const char* topicCmd    = "/esp/2/cmd";
-const char* topicStatus = "/esp/2/status";
-const char* clientId    = "ESP8266Client2";
+#define CLIENT_ID     "1"
+const char* mqtt_server = "192.168.1.17";
+const char* topicCmd    = "/esp/1/cmd";
+const char* topicStatus = "/esp/1/status";
+const char* clientId    = "ESP8266Client1";
 // network.
 const char* ssid = "MaisonSMT";
 const char* password = "m3f13t01";
@@ -55,18 +55,37 @@ short loopCnt = 0;
 // timing
 long lastCheck = 0;
 
-void setup()
-{
-    Serial.begin(115200);
+// msg
+char msg[50];
+char topic[50];
+
+void info(){
     Serial.println("sensor to mqtt");
     Serial.print("VERSION: ");
     Serial.println(PRJ_VERSION);
     Serial.println();
+    Serial.print("Wifi: ");
+    Serial.println(ssid);
+    Serial.print("mqtt: ");
+    Serial.println(mqtt_server);
+    Serial.print("topics: ");
+    Serial.print(topicStatus);
+    Serial.print(" , ");
+    Serial.println(topicCmd);
+    Serial.print("wait (ms)");
+    Serial.println(LOOP_WAIT);  
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    info();
 
     // network
     setup_wifi();
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
+    reconnect();
     
     //
     // Display
@@ -89,7 +108,7 @@ void setup()
     // première mesure
     Serial.println("Lancement de la première mesure");  
     displayAllOff();
-
+    work();
     
     Serial.println("Type,\tstatus,\tHumidity (%),\tTemperature (C)\tTime (us)");
 }
@@ -119,7 +138,7 @@ void setup_wifi() {
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(". ");
+    Serial.print(".");
     delay(200);
   }
 
@@ -150,7 +169,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void checkClient() {
-  Serial.println("checkClient");
   if (!client.connected()) {
     reconnect();
   }
@@ -193,8 +211,48 @@ void work(){
     sendDatas();
 }
 
+char *ftoa(char *a, double f, int precision){
+ long p[] = {0,10,100,1000,10000,100000,1000000,10000000,100000000};
+ 
+ char *ret = a;
+ long heiltal = (long)f;
+ itoa(heiltal, a, 10);
+ while (*a != '\0') a++;
+ *a++ = '.';
+ long desimal = abs((long)((f - heiltal) * p[precision]));
+ itoa(desimal, a, 10);
+ return ret;
+}
+
 void sendDatas(){
-  
+  sendTemperature(temperature);
+  sendPressure(pressure);
+}
+
+void sendTemperature(float aTemperature){
+//  int intPart = (int)aTemperature;
+//  //int decPart; = (int)((aTemperature-intPart)*100);
+//  unsigned int decPart;
+//  if(intPart < 0){
+//    
+//  }
+  ftoa(msg, aTemperature, 2);
+  //snprintf (msg, sizeof(msg), "%s.%s", intPart, decPart);
+  snprintf (topic, sizeof(topic), "%s/%s", topicStatus, "temperature");
+  sendmsgToTopic();
+}
+
+void sendPressure(int aPresure){
+  snprintf (msg, sizeof(msg), "%d", aPresure);
+  snprintf (topic, sizeof(topic), "%s/%s", topicStatus, "pressure");
+  sendmsgToTopic();
+}
+void sendmsgToTopic(){
+  Serial.print("Publish on: ");
+  Serial.print(topic);
+  Serial.print(" message: ");
+  Serial.println(msg);
+  client.publish(topic, msg);
 }
 
 void readSensor(){
