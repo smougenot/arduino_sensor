@@ -25,6 +25,10 @@ TM1637Display display(CLK, DATA);
 
 //Sensor
 
+// address pin is low
+int BH1750address = 0x23; //setting i2c address
+byte buff[2];
+
 // Connect VCC of the BMP085 sensor to 3.3V (NOT 5.0V!)
 // Connect GND to Ground
 // Connect SCL to i2c clock - on '168/'328 Arduino Uno/Duemilanove/etc thats Analog 5 esp8266 -> #5
@@ -51,6 +55,8 @@ PubSubClient client(espClient);
 float temperature = -1;
 float altitude = -1;
 int pressure = -1;
+uint16_t light = 0;
+
 short loopCnt = 0;
 // timing
 long lastCheck = 0;
@@ -227,6 +233,7 @@ char *ftoa(char *a, double f, int precision){
 void sendDatas(){
   sendTemperature(temperature);
   sendPressure(pressure);
+  sendLight(light);
 }
 
 void sendTemperature(float aTemperature){
@@ -247,6 +254,13 @@ void sendPressure(int aPresure){
   snprintf (topic, sizeof(topic), "%s/%s", topicStatus, "pressure");
   sendmsgToTopic();
 }
+
+void sendLight(uint16_t aLight){
+  snprintf (msg, sizeof(msg), "%d", aLight);
+  snprintf (topic, sizeof(topic), "%s/%s", topicStatus, "light");
+  sendmsgToTopic();
+}
+
 void sendmsgToTopic(){
   Serial.print("Publish on: ");
   Serial.print(topic);
@@ -257,7 +271,6 @@ void sendmsgToTopic(){
 
 void readSensor(){
     //Serial.println("Read bpm180");
-    // READ DATA
     float myTemperature = bmp.readTemperature();
     if(myTemperature<150){
       // assumed correct read
@@ -265,6 +278,49 @@ void readSensor(){
       pressure = bmp.readPressure();
       altitude = bmp.readAltitude();
     }
+    //Serial.println("Read bh1750");
+    uint16_t myLight = readLight();
+    if(myLight>=0){
+      // assumed correct read
+      light = myLight;
+    }
+}
+
+uint16_t readLight(){
+  int i;
+  uint16_t val=-1;
+  BH1750_Init(BH1750address);
+  delay(100);
+ 
+  if(2==BH1750_Read(BH1750address)) {
+    val=((buff[0]<<8)|buff[1])/1.2;
+    Serial.print(val,DEC);     
+    Serial.println("[lx]"); 
+  } else {
+    Serial.println("can't read"); 
+  }
+  return val;
+}
+
+int BH1750_Read(int address) //
+{
+  int i=0;
+  Wire.beginTransmission(address);
+  Wire.requestFrom(address, 2);
+  while(Wire.available()) //
+  {
+    buff[i] = Wire.read();  // receive one byte
+    i++;
+  }
+  Wire.endTransmission();  
+  return i;
+}
+ 
+void BH1750_Init(int address) 
+{
+  Wire.beginTransmission(address);
+  Wire.write(0x10);//1lx reolution 120ms
+  Wire.endTransmission();
 }
 
 void trace(){
@@ -272,20 +328,21 @@ void trace(){
     if(loopCnt++ %20 == 0){
       printHeader();
     }
-    printData(temperature, pressure, altitude);  
+    printData(temperature, pressure, altitude, light);  
 }
 
-void printData(float aTemperature, int aPressure, float aAltitude){
+void printData(float aTemperature, int aPressure, float aAltitude, uint16_t aLight){
   Serial.print(aTemperature);
   Serial.print("\t");
   Serial.print(aPressure);
   Serial.print("\t");
   Serial.print(aAltitude);
-  Serial.println("");
+  Serial.print("\t");
+  Serial.println(aLight);
 }
 
 void printHeader(){
-  Serial.println("Temperature °C\tPressure\tAltitude");  
+  Serial.println("Temperature °C\tPressure\tAltitude\tlight");  
 }
 
 
