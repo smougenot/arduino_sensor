@@ -40,13 +40,24 @@ Adafruit_BMP085 bmp;
 
 // MQTT
 #define CLIENT_ID     "1"
-const char* mqtt_server = "192.168.1.17";
+const char* mqtt_server;
+const char* mqtt_server_home = "192.168.1.17";
+const char* mqtt_server_mobile = "192.168.43.219";
 const char* topicCmd    = "/esp/1/cmd";
 const char* topicStatus = "/esp/1/status";
 const char* clientId    = "ESP8266Client1";
+
 // network.
-const char* ssid = "MaisonSMT";
-const char* password = "m3f13t01";
+//const char* ssid = "MaisonSMT";
+//const char* password = "m3f13t01";
+
+// Home router
+const char* ssid_home = "MaisonSMT";
+const char* password_home = "m3f13t01";
+
+// Alternate router for mobile demos
+const char* ssid_mobile = "Xperia S_78d6";
+const char* password_mobile = "pobeda0117";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -71,7 +82,9 @@ void info(){
     Serial.println(PRJ_VERSION);
     Serial.println();
     Serial.print("Wifi: ");
-    Serial.println(ssid);
+    Serial.print(ssid_home);
+    Serial.print("|");
+    Serial.println(ssid_mobile);
     Serial.print("mqtt: ");
     Serial.println(mqtt_server);
     Serial.print("topics: ");
@@ -88,8 +101,8 @@ void setup()
     info();
 
     // network
-    setup_wifi();
-    client.setServer(mqtt_server, 1883);
+    setup_wifi_multi();
+
     client.setCallback(callback);
     reconnect();
     
@@ -133,7 +146,23 @@ void loop()
   }
 }
 
-void setup_wifi() {
+void setup_wifi_multi() {
+    if(!setup_wifi(ssid_mobile, password_mobile)){
+      if(!setup_wifi(ssid_home, password_home)){
+        // loop will force reboot
+        while (1) {}
+      }else {
+        mqtt_server = mqtt_server_home;
+      }
+    }else {
+      mqtt_server = mqtt_server_mobile;
+    }
+    Serial.print("Mqtt server set to ");
+    Serial.println(mqtt_server);
+    client.setServer(mqtt_server, 1883);
+}
+
+boolean setup_wifi(const char* ssid, const char* password) {
 
   delay(10);
   // We start by connecting to a WiFi network
@@ -143,7 +172,11 @@ void setup_wifi() {
 
   WiFi.begin(ssid, password);
 
+  int cpt=0;
   while (WiFi.status() != WL_CONNECTED) {
+    if(++cpt > 50){
+      return false;
+    }
     Serial.print(".");
     delay(200);
   }
@@ -152,6 +185,7 @@ void setup_wifi() {
   Serial.println("WiFi connected");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  return true;
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -183,7 +217,13 @@ void checkClient() {
 
 void reconnect() {
   Serial.println("reconnect");
-  // Loop until we're reconnected
+
+  //reconnect wifi first
+  if(WiFi.status() != WL_CONNECTED){
+    setup_wifi_multi();
+  }
+  
+  // Loop until we're reconnected to MQTT server
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
