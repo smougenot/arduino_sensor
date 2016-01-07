@@ -237,14 +237,7 @@ void sendDatas(){
 }
 
 void sendTemperature(float aTemperature){
-//  int intPart = (int)aTemperature;
-//  //int decPart; = (int)((aTemperature-intPart)*100);
-//  unsigned int decPart;
-//  if(intPart < 0){
-//    
-//  }
   ftoa(msg, aTemperature, 2);
-  //snprintf (msg, sizeof(msg), "%s.%s", intPart, decPart);
   snprintf (topic, sizeof(topic), "%s/%s", topicStatus, "temperature");
   sendmsgToTopic();
 }
@@ -294,10 +287,10 @@ uint16_t readLight(){
  
   if(2==BH1750_Read(BH1750address)) {
     val=((buff[0]<<8)|buff[1])/1.2;
-    Serial.print(val,DEC);     
-    Serial.println("[lx]"); 
+    //Serial.print(val,DEC);     
+    //Serial.println("lx"); 
   } else {
-    Serial.println("can't read"); 
+    Serial.println("can't read light"); 
   }
   return val;
 }
